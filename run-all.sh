@@ -18,6 +18,15 @@
 ./install-vscode-insiders.sh
 ./install-antigravity.sh
 ./install-zed.sh
+./install-agent-browser.sh
+./install-android-studio.sh
+./install-claude-code.sh
+./install-direnv.sh
+./install-google-chrome.sh
+./install-helium-browser.sh
+./install-kimi-code.sh
+./install-pencil.sh
+./install-uv.sh
 
 # install stow for dotfiles management
 ./install-stow.sh
