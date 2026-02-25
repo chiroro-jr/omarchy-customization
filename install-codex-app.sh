@@ -123,7 +123,82 @@ write_wrapper() {
 #!/usr/bin/env bash
 set -euo pipefail
 
-exec "$INSTALL_DIR/start.sh" "\$@"
+APP_DIR="$INSTALL_DIR"
+WEBVIEW_DIR="\$APP_DIR/content/webview"
+HTTP_PID=""
+
+wait_for_webview_server() {
+  python3 - <<'PY'
+import socket
+import sys
+import time
+
+deadline = time.time() + 5.0
+while time.time() < deadline:
+    sock = socket.socket()
+    sock.settimeout(0.25)
+    try:
+        sock.connect(("127.0.0.1", 5175))
+        sock.close()
+        sys.exit(0)
+    except OSError:
+        time.sleep(0.1)
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+sys.exit(1)
+PY
+}
+
+cleanup() {
+  if [ -n "\${HTTP_PID:-}" ] && kill -0 "\$HTTP_PID" >/dev/null 2>&1; then
+    kill "\$HTTP_PID" >/dev/null 2>&1 || true
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
+if [ ! -x "\$APP_DIR/electron" ]; then
+  echo "[ERROR] Missing executable: \$APP_DIR/electron" >&2
+  exit 1
+fi
+
+if [ ! -d "\$WEBVIEW_DIR" ]; then
+  echo "[ERROR] Missing webview directory: \$WEBVIEW_DIR" >&2
+  exit 1
+fi
+
+if command -v pkill >/dev/null 2>&1; then
+  pkill -f "python3 -m http.server 5175" >/dev/null 2>&1 || true
+fi
+
+python3 -m http.server 5175 --bind 127.0.0.1 --directory "\$WEBVIEW_DIR" >/dev/null 2>&1 &
+HTTP_PID="\$!"
+
+if ! wait_for_webview_server; then
+  echo "[ERROR] Webview server failed to start on http://127.0.0.1:5175" >&2
+  exit 1
+fi
+
+export CODEX_CLI_PATH="\${CODEX_CLI_PATH:-\$(command -v codex 2>/dev/null || true)}"
+if [ -z "\$CODEX_CLI_PATH" ]; then
+  echo "[ERROR] Codex CLI not found. Install with: npm i -g @openai/codex" >&2
+  exit 1
+fi
+
+EXTRA_ELECTRON_FLAGS=()
+if [ "\${CODEX_APP_DISABLE_GPU:-0}" = "1" ]; then
+  EXTRA_ELECTRON_FLAGS+=(--disable-gpu --disable-gpu-compositing)
+fi
+
+if [ "\${CODEX_APP_USE_X11:-0}" = "1" ]; then
+  export ELECTRON_OZONE_PLATFORM_HINT=x11
+fi
+
+"\$APP_DIR/electron" --no-sandbox "\${EXTRA_ELECTRON_FLAGS[@]}" "\$@"
 EOF
 
   chmod +x "$WRAPPER_BIN"
@@ -212,7 +287,7 @@ main() {
     run_upstream_installer "$dmg_path"
   fi
 
-  [ -x "$INSTALL_DIR/start.sh" ] || error "Codex app not found at $INSTALL_DIR/start.sh"
+  [ -x "$INSTALL_DIR/electron" ] || error "Codex app not found at $INSTALL_DIR/electron"
 
   install_icon
   write_wrapper
