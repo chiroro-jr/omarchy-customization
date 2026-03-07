@@ -32,14 +32,23 @@ error() {
 download_file() {
   local url="$1"
   local out="$2"
+  local mode="${3:-quiet}"
 
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$out"
+    if [ "$mode" = "progress" ]; then
+      curl -fL --progress-bar --retry 3 --retry-delay 2 "$url" -o "$out"
+    else
+      curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$out"
+    fi
     return
   fi
 
   if command -v wget >/dev/null 2>&1; then
-    wget -qO "$out" "$url"
+    if [ "$mode" = "progress" ]; then
+      wget --show-progress -O "$out" "$url"
+    else
+      wget -qO "$out" "$url"
+    fi
     return
   fi
 
@@ -145,7 +154,7 @@ main() {
   tmp_appimage="$tmp_dir/$asset_name"
 
   info "Downloading ${asset_name}..."
-  download_file "$appimage_url" "$tmp_appimage"
+  download_file "$appimage_url" "$tmp_appimage" "progress"
 
   mv "$tmp_appimage" "$APPIMAGE_PATH"
   chmod +x "$APPIMAGE_PATH"
