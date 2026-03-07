@@ -118,12 +118,12 @@ EOF
 }
 
 main() {
-  local tmp_dir metadata_path tmp_appimage tag appimage_url asset_name current_version
+  local tmp_dir="" metadata_path tmp_appimage tag appimage_url asset_name current_version
 
   require_python
 
   tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  trap '[ -n "$tmp_dir" ] && rm -rf "$tmp_dir"' EXIT
 
   metadata_path="$tmp_dir/release.json"
 
