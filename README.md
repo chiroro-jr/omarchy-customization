@@ -28,7 +28,7 @@ The `run-all.sh` script orchestrates the following process:
 
 2.  **Package Installation**:
     - **Shell**: Fish
-    - **Development**: Node.js, pnpm, Bun, Gemini CLI, Opencode, MariaDB Clients.
+    - **Development**: Node.js, pnpm, Bun, Gemini CLI, Opencode, T3 Code, MariaDB Clients.
     - **Editors**: VS Code, VS Code Insiders, Zed, Antigravity.
 
 3.  **Configuration & Dotfiles**:

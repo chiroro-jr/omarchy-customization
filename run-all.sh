@@ -25,6 +25,7 @@
 ./install-google-chrome.sh
 ./install-helium-browser.sh
 ./install-kimi-code.sh
+./install-t3-code.sh
 ./install-pencil.sh
 ./install-uv.sh
 
