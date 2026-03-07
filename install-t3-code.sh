@@ -1,3 +1,178 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-yay -S --noconfirm --needed t3code-bin
+set -euo pipefail
+
+REPO="pingdotgg/t3code"
+RELEASE_API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+ICON_URL="https://raw.githubusercontent.com/pingdotgg/t3code/main/apps/desktop/resources/icon.png"
+
+INSTALL_DIR="$HOME/.local/share/t3-code"
+APPIMAGE_PATH="$INSTALL_DIR/T3-Code.AppImage"
+VERSION_PATH="$INSTALL_DIR/version.txt"
+DESKTOP_DIR="$HOME/.local/share/applications"
+DESKTOP_FILE="$DESKTOP_DIR/t3-code.desktop"
+BIN_DIR="$HOME/.local/bin"
+BIN_PATH="$BIN_DIR/t3-code"
+ICON_DIR="$HOME/.local/share/icons/hicolor/512x512/apps"
+ICON_PATH="$ICON_DIR/t3-code.png"
+
+info() {
+  echo "[INFO] $*"
+}
+
+warn() {
+  echo "[WARN] $*" >&2
+}
+
+error() {
+  echo "[ERROR] $*" >&2
+  exit 1
+}
+
+download_file() {
+  local url="$1"
+  local out="$2"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$out"
+    return
+  fi
+
+  if command -v wget >/dev/null 2>&1; then
+    wget -qO "$out" "$url"
+    return
+  fi
+
+  error "curl or wget is required to download files."
+}
+
+require_python() {
+  command -v python3 >/dev/null 2>&1 || error "python3 is required to parse GitHub release metadata."
+}
+
+resolve_release_metadata() {
+  local metadata_path="$1"
+
+  download_file "$RELEASE_API_URL" "$metadata_path"
+
+  python3 - "$metadata_path" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+
+with open(path, "r", encoding="utf-8") as fh:
+    release = json.load(fh)
+
+assets = release.get("assets", [])
+appimages = [
+    asset for asset in assets
+    if asset.get("name", "").endswith(".AppImage")
+]
+
+preferred = None
+for asset in appimages:
+    name = asset.get("name", "").lower()
+    if "x86_64" in name or "amd64" in name:
+        preferred = asset
+        break
+
+if preferred is None and appimages:
+    preferred = appimages[0]
+
+if preferred is None:
+    print("No AppImage asset found in the latest release.", file=sys.stderr)
+    sys.exit(1)
+
+print(release["tag_name"])
+print(preferred["browser_download_url"])
+print(preferred["name"])
+PY
+}
+
+write_desktop_file() {
+  mkdir -p "$DESKTOP_DIR"
+
+  cat > "$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Version=1.0
+Name=T3 Code
+Comment=T3 Code desktop app
+Exec=$APPIMAGE_PATH %U
+TryExec=$APPIMAGE_PATH
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Development;IDE;
+StartupNotify=true
+EOF
+}
+
+main() {
+  local tmp_dir metadata_path tmp_appimage tag appimage_url asset_name current_version
+
+  require_python
+
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$tmp_dir"' EXIT
+
+  metadata_path="$tmp_dir/release.json"
+
+  info "Resolving latest T3 Code release from ${RELEASE_API_URL}..."
+  mapfile -t release_data < <(resolve_release_metadata "$metadata_path")
+
+  if [ "${#release_data[@]}" -lt 3 ]; then
+    error "Could not resolve the latest T3 Code AppImage asset."
+  fi
+
+  tag="${release_data[0]}"
+  appimage_url="${release_data[1]}"
+  asset_name="${release_data[2]}"
+
+  mkdir -p "$INSTALL_DIR" "$DESKTOP_DIR" "$BIN_DIR" "$ICON_DIR"
+
+  current_version=""
+  if [ -f "$VERSION_PATH" ]; then
+    current_version="$(cat "$VERSION_PATH")"
+  fi
+
+  if [ "$current_version" = "$tag" ]; then
+    info "Installed version already matches latest release (${tag}). Reinstalling to refresh local files."
+  else
+    info "Updating T3 Code from ${current_version:-not installed} to ${tag}."
+  fi
+
+  tmp_appimage="$tmp_dir/$asset_name"
+
+  info "Downloading ${asset_name}..."
+  download_file "$appimage_url" "$tmp_appimage"
+
+  mv "$tmp_appimage" "$APPIMAGE_PATH"
+  chmod +x "$APPIMAGE_PATH"
+  printf '%s\n' "$tag" > "$VERSION_PATH"
+
+  if download_file "$ICON_URL" "$ICON_PATH"; then
+    :
+  else
+    warn "Could not download icon from ${ICON_URL}."
+  fi
+
+  write_desktop_file
+  chmod +x "$DESKTOP_FILE"
+  ln -sf "$APPIMAGE_PATH" "$BIN_PATH"
+
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
+  fi
+
+  if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+  fi
+
+  info "T3 Code installed successfully."
+  info "Version: ${tag}"
+  info "Source: ${appimage_url}"
+  info "Run 't3-code' or launch it from your application menu."
+}
+
+main "$@"

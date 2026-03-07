@@ -46,6 +46,7 @@ The `run-all.sh` script orchestrates the following process:
 
 - `run-all.sh`: The main entry point that executes all other scripts in the correct order.
 - `install-*.sh`: Scripts dedicated to installing specific tools or packages (e.g., `install-fish.sh`, `install-vscode.sh`).
+- `install-t3-code.sh`: Downloads the latest T3 Code AppImage directly from GitHub Releases and can be rerun to update immediately.
 - `symlink-*.sh`: Scripts for linking configuration files that require special handling (VS Code).
 - `change-shell.sh`: Sets `fish` as the default user shell.
 - `remove-orphans.sh`: Cleans up unused dependencies using `pacman -Qtdq`.
