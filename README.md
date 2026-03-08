@@ -46,7 +46,11 @@ The `run-all.sh` script orchestrates the following process:
 
 - `run-all.sh`: The main entry point that executes all other scripts in the correct order.
 - `install-*.sh`: Scripts dedicated to installing specific tools or packages (e.g., `install-fish.sh`, `install-vscode.sh`).
+- `install-opencode-desktop.sh`: Downloads the latest Opencode Desktop AppImage directly from GitHub Releases to avoid the current `opencode-bin` vs `opencode-desktop-bin` AUR package conflict.
 - `install-t3-code.sh`: Downloads the latest T3 Code AppImage directly from GitHub Releases and can be rerun to update immediately.
+- `uninstall-kimi-code.sh`: Removes the `kimi-cli` tool installed via `uv`, with a manual fallback if `uv` is no longer present.
+- `uninstall-opencode-desktop.sh`: Removes the locally installed Opencode Desktop AppImage, launcher, desktop file, and icon.
+- `uninstall-t3-code.sh`: Removes the locally installed T3 Code AppImage, launcher, desktop file, and icon.
 - `symlink-*.sh`: Scripts for linking configuration files that require special handling (VS Code).
 - `change-shell.sh`: Sets `fish` as the default user shell.
 - `remove-orphans.sh`: Cleans up unused dependencies using `pacman -Qtdq`.
