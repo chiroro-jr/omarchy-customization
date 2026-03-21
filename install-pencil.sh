@@ -19,7 +19,15 @@ mkdir -p "$ICON_DIR"
 
 # Download and extract
 echo "Downloading Pencil..."
-curl -L "$TAR_URL" -o /tmp/pencil.tar.gz
+curl \
+    --fail \
+    --location \
+    --http1.1 \
+    --retry 5 \
+    --retry-delay 2 \
+    --retry-all-errors \
+    "$TAR_URL" \
+    -o /tmp/pencil.tar.gz
 
 echo "Extracting..."
 tar -xzf /tmp/pencil.tar.gz -C "$INSTALL_DIR" --strip-components=1
@@ -29,7 +37,15 @@ rm /tmp/pencil.tar.gz
 
 # Download icon
 echo "Downloading icon..."
-curl -L "$ICON_URL" -o "$ICON_DIR/pencil.ico" 2>/dev/null || echo "Warning: Could not download icon"
+curl \
+    --fail \
+    --location \
+    --http1.1 \
+    --retry 5 \
+    --retry-delay 2 \
+    --retry-all-errors \
+    "$ICON_URL" \
+    -o "$ICON_DIR/pencil.ico" 2>/dev/null || echo "Warning: Could not download icon"
 
 # Create desktop entry
 cat > "$DESKTOP_DIR/pencil.desktop" << EOF
