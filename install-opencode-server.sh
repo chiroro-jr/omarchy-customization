@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Install opencode server service with portless (HTTP version)
+# Install opencode server service with portless
 
 # Check if opencode is installed
 if ! command -v opencode >/dev/null 2>&1; then
@@ -8,9 +8,10 @@ if ! command -v opencode >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check if portless is installed
-if ! command -v portless >/dev/null 2>&1; then
-    echo "portless not installed. Run ./install-portless.sh first."
+# Check if portless proxy user service is running
+if ! systemctl --user is-active --quiet portless-proxy.service 2>/dev/null; then
+    echo "Portless proxy user service is not running."
+    echo "Run './install-portless.sh' first."
     exit 1
 fi
 
@@ -28,11 +29,12 @@ chmod +x ~/.local/bin/opencode-serve-portless
 # Create systemd user directory if needed
 mkdir -p ~/.config/systemd/user
 
-# Create the service file
+# Create the service file - depends on portless-proxy
 cat > ~/.config/systemd/user/opencode-server.service << 'EOF'
 [Unit]
-Description=OpenCode Server with Portless
-After=network.target
+Description=OpenCode Server
+After=network.target portless-proxy.service
+Requires=portless-proxy.service
 
 [Service]
 Type=simple
@@ -60,3 +62,5 @@ echo "Manage with:"
 echo "  systemctl --user status opencode-server.service"
 echo "  systemctl --user stop opencode-server.service"
 echo "  systemctl --user start opencode-server.service"
+echo ""
+echo "Dependencies: portless-proxy.service"
