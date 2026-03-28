@@ -15,19 +15,32 @@ if ! systemctl is-active --quiet portless-proxy.service 2>/dev/null; then
     exit 1
 fi
 
+# Create bin directory if needed
+mkdir -p ~/.local/bin
+
+# Create wrapper script that uses PORT env var
+cat > ~/.local/bin/opencode-serve-portless << 'EOF'
+#!/bin/sh
+# Read PORT from environment (set by portless) or default to 4096
+exec opencode serve --hostname 127.0.0.1 --port "${PORT:-4096}"
+EOF
+
+chmod +x ~/.local/bin/opencode-serve-portless
+
 # Create systemd user directory if needed
 mkdir -p ~/.config/systemd/user
 
-# Create the service file - run opencode directly on port 4096
-# portless alias will be used to register it with the proxy
+# Create the service file
+# PORTLESS_PORT=443 tells portless to use the system proxy on port 443
 cat > ~/.config/systemd/user/opencode-server.service << 'EOF'
 [Unit]
-Description=OpenCode Server
+Description=OpenCode Server with Portless
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=opencode serve --hostname 127.0.0.1 --port 4096
+Environment="PORTLESS_PORT=443"
+ExecStart=/usr/bin/portless opencode %h/.local/bin/opencode-serve-portless
 Restart=on-failure
 RestartSec=5
 
@@ -43,12 +56,6 @@ systemctl --user enable opencode-server.service
 
 # Start the service
 systemctl --user start opencode-server.service
-
-# Wait a moment for the service to start
-sleep 2
-
-# Register with portless proxy using alias
-portless alias opencode 4096 --force
 
 echo "OpenCode server service installed and started."
 echo "Access at: https://opencode.localhost"
