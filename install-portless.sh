@@ -2,5 +2,25 @@
 
 yay -S --needed --noconfirm portless-bin
 
-# Enable HTTPS proxy (one-time setup)
-portless proxy start --https 2>/dev/null || true
+echo ""
+echo "Portless installed. To set up system-wide HTTPS proxy on port 443, run:"
+echo ""
+echo "  sudo tee /etc/systemd/system/portless-proxy.service << 'EOF'"
+echo "  [Unit]"
+echo "  Description=Portless Proxy (HTTPS on port 443)"
+echo "  After=network.target"
+echo "  "
+echo "  [Service]"
+echo "  Type=simple"
+echo "  ExecStart=/usr/bin/portless proxy start --https --port 443 --foreground"
+echo "  Restart=on-failure"
+echo "  RestartSec=5"
+echo "  "
+echo "  [Install]"
+echo "  WantedBy=multi-user.target"
+echo "  EOF"
+echo "  sudo systemctl daemon-reload"
+echo "  sudo systemctl enable portless-proxy.service"
+echo "  sudo systemctl start portless-proxy.service"
+echo ""
+echo "This will make https://*.localhost work without port numbers."

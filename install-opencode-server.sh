@@ -31,12 +31,12 @@ mkdir -p ~/.config/systemd/user
 # Create the service file
 cat > ~/.config/systemd/user/opencode-server.service << 'EOF'
 [Unit]
-Description=OpenCode Server with Portless
+Description=OpenCode Server
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/portless opencode /home/dennis/.local/bin/opencode-serve-portless
+ExecStart=/usr/bin/portless opencode %h/.local/bin/opencode-serve-portless
 Restart=on-failure
 RestartSec=5
 
