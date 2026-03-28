@@ -8,9 +8,10 @@ if ! command -v opencode >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check if portless is installed
-if ! command -v portless >/dev/null 2>&1; then
-    echo "portless not installed. Run ./install-portless.sh first."
+# Check if portless proxy system service is running
+if ! systemctl is-active --quiet portless-proxy.service 2>/dev/null; then
+    echo "Portless proxy system service is not running."
+    echo "Run 'sudo ./install-portless.sh' first."
     exit 1
 fi
 
