@@ -14,9 +14,6 @@ if ! command -v portless >/dev/null 2>&1; then
     exit 1
 fi
 
-# Enable HTTPS proxy (one-time setup)
-portless proxy start --https 2>/dev/null || true
-
 # Create bin directory if needed
 mkdir -p ~/.local/bin
 
