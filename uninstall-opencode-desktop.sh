@@ -21,7 +21,14 @@ remove_path() {
   fi
 }
 
-refresh_desktop_caches() {
+main() {
+  info "Uninstalling OpenCode Desktop..."
+
+  remove_path "$INSTALL_DIR"
+  remove_path "$DESKTOP_FILE"
+  remove_path "$BIN_PATH"
+  remove_path "$ICON_PATH"
+
   if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
   fi
@@ -29,19 +36,8 @@ refresh_desktop_caches() {
   if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -f "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
   fi
-}
 
-main() {
-  info "Uninstalling Opencode Desktop..."
-
-  remove_path "$INSTALL_DIR"
-  remove_path "$DESKTOP_FILE"
-  remove_path "$BIN_PATH"
-  remove_path "$ICON_PATH"
-
-  refresh_desktop_caches
-
-  info "Opencode Desktop uninstalled."
+  info "OpenCode Desktop uninstalled."
 }
 
 main "$@"

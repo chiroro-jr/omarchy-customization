@@ -3,7 +3,8 @@
 set -euo pipefail
 
 REPO="pingdotgg/t3code"
-RELEASE_API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+LATEST_STABLE_RELEASE_API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+RELEASES_API_URL="https://api.github.com/repos/${REPO}/releases?per_page=100"
 ICON_URL="https://raw.githubusercontent.com/pingdotgg/t3code/main/apps/desktop/resources/icon.png"
 
 INSTALL_DIR="$HOME/.local/share/t3-code"
@@ -27,6 +28,18 @@ warn() {
 error() {
   echo "[ERROR] $*" >&2
   exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./install-t3-code.sh [--channel stable|nightly] [--nightly|--stable]
+
+Options:
+  --channel   Select release channel explicitly (stable or nightly).
+  --nightly   Shortcut for --channel nightly.
+  --stable    Shortcut for --channel stable (default if omitted).
+  -h, --help  Show this help message.
+EOF
 }
 
 download_file() {
@@ -61,41 +74,96 @@ require_python() {
 
 resolve_release_metadata() {
   local metadata_path="$1"
+  local release_channel="$2"
+  local api_url
 
-  download_file "$RELEASE_API_URL" "$metadata_path"
+  if [ "$release_channel" = "nightly" ]; then
+    api_url="$RELEASES_API_URL"
+  else
+    api_url="$LATEST_STABLE_RELEASE_API_URL"
+  fi
 
-  python3 - "$metadata_path" <<'PY'
+  download_file "$api_url" "$metadata_path"
+
+  python3 - "$metadata_path" "$release_channel" <<'PY'
 import json
 import sys
 
 path = sys.argv[1]
+release_channel = sys.argv[2]
 
 with open(path, "r", encoding="utf-8") as fh:
-    release = json.load(fh)
+    payload = json.load(fh)
 
-assets = release.get("assets", [])
-appimages = [
-    asset for asset in assets
-    if asset.get("name", "").endswith(".AppImage")
-]
 
-preferred = None
-for asset in appimages:
-    name = asset.get("name", "").lower()
-    if "x86_64" in name or "amd64" in name:
-        preferred = asset
-        break
+def pick_appimage_asset(release):
+    assets = release.get("assets", [])
+    appimages = [
+        asset for asset in assets
+        if asset.get("name", "").endswith(".AppImage")
+    ]
 
-if preferred is None and appimages:
-    preferred = appimages[0]
+    preferred = None
+    for asset in appimages:
+        name = asset.get("name", "").lower()
+        if "x86_64" in name or "amd64" in name:
+            preferred = asset
+            break
 
-if preferred is None:
-    print("No AppImage asset found in the latest release.", file=sys.stderr)
+    if preferred is None and appimages:
+        preferred = appimages[0]
+
+    return preferred
+
+
+def resolve_release_for_channel(channel, data):
+    if channel == "stable":
+        if isinstance(data, dict):
+            return data
+
+        if isinstance(data, list):
+            for release in data:
+                if not release.get("prerelease", False):
+                    return release
+
+        return None
+
+    if not isinstance(data, list):
+        return None
+
+    nightly_releases = [
+        release for release in data
+        if release.get("tag_name", "").startswith("nightly-")
+    ]
+
+    if nightly_releases:
+        return nightly_releases[0]
+
+    fallback_nightly_releases = [
+        release for release in data
+        if release.get("prerelease", False)
+        and "nightly" in release.get("tag_name", "").lower()
+    ]
+
+    if fallback_nightly_releases:
+        return fallback_nightly_releases[0]
+
+    return None
+
+
+release = resolve_release_for_channel(release_channel, payload)
+if release is None:
+    print(f"Could not find a {release_channel} release in GitHub metadata.", file=sys.stderr)
+    sys.exit(1)
+
+asset = pick_appimage_asset(release)
+if asset is None:
+    print(f"No AppImage asset found for release {release.get('tag_name', '<unknown>')}.", file=sys.stderr)
     sys.exit(1)
 
 print(release["tag_name"])
-print(preferred["browser_download_url"])
-print(preferred["name"])
+print(asset["browser_download_url"])
+print(asset["name"])
 PY
 }
 
@@ -118,7 +186,43 @@ EOF
 }
 
 main() {
-  local tmp_dir metadata_path tmp_appimage tag appimage_url asset_name current_version
+  local release_channel tmp_dir metadata_path tmp_appimage tag appimage_url asset_name current_version
+
+  release_channel="stable"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --channel)
+        if [ "$#" -lt 2 ]; then
+          error "--channel requires a value: stable or nightly"
+        fi
+
+        case "$2" in
+          stable|nightly)
+            release_channel="$2"
+            ;;
+          *)
+            error "Invalid --channel value: $2 (expected: stable or nightly)"
+            ;;
+        esac
+        shift
+        ;;
+      --nightly)
+        release_channel="nightly"
+        ;;
+      --stable)
+        release_channel="stable"
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        error "Unknown option: $1"
+        ;;
+    esac
+    shift
+  done
 
   require_python
 
@@ -127,11 +231,16 @@ main() {
 
   metadata_path="$tmp_dir/release.json"
 
-  info "Resolving latest T3 Code release from ${RELEASE_API_URL}..."
-  mapfile -t release_data < <(resolve_release_metadata "$metadata_path")
+  if [ "$release_channel" = "nightly" ]; then
+    info "Resolving latest T3 Code nightly release from ${RELEASES_API_URL}..."
+  else
+    info "Resolving latest T3 Code stable release from ${LATEST_STABLE_RELEASE_API_URL}..."
+  fi
+
+  mapfile -t release_data < <(resolve_release_metadata "$metadata_path" "$release_channel")
 
   if [ "${#release_data[@]}" -lt 3 ]; then
-    error "Could not resolve the latest T3 Code AppImage asset."
+    error "Could not resolve the latest ${release_channel} T3 Code AppImage asset."
   fi
 
   tag="${release_data[0]}"
@@ -146,7 +255,7 @@ main() {
   fi
 
   if [ "$current_version" = "$tag" ]; then
-    info "Installed version already matches latest release (${tag}). Reinstalling to refresh local files."
+    info "Installed version already matches selected release (${tag}). Reinstalling to refresh local files."
   else
     info "Updating T3 Code from ${current_version:-not installed} to ${tag}."
   fi
@@ -179,6 +288,7 @@ main() {
   fi
 
   info "T3 Code installed successfully."
+  info "Channel: ${release_channel}"
   info "Version: ${tag}"
   info "Source: ${appimage_url}"
   info "Run 't3-code' or launch it from your application menu."

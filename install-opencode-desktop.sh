@@ -4,10 +4,10 @@ set -euo pipefail
 
 REPO="anomalyco/opencode"
 RELEASE_API_URL="https://api.github.com/repos/${REPO}/releases/latest"
-ICON_URL="https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/desktop/src-tauri/icons/prod/icon.png"
+ICON_URL="https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/desktop-electron/icons/prod/icon.png"
 
 INSTALL_DIR="$HOME/.local/share/opencode-desktop"
-APPIMAGE_PATH="$INSTALL_DIR/opencode-desktop.AppImage"
+APPIMAGE_PATH="$INSTALL_DIR/OpenCode-Desktop.AppImage"
 VERSION_PATH="$INSTALL_DIR/version.txt"
 DESKTOP_DIR="$HOME/.local/share/applications"
 DESKTOP_FILE="$DESKTOP_DIR/opencode-desktop.desktop"
@@ -74,24 +74,30 @@ with open(path, "r", encoding="utf-8") as fh:
     release = json.load(fh)
 
 assets = release.get("assets", [])
-appimages = [
-    asset for asset in assets
-    if asset.get("name", "").endswith(".AppImage")
-]
+appimages = [asset for asset in assets if asset.get("name", "").endswith(".AppImage")]
+
+if not appimages:
+    print("No AppImage asset found in the latest release.", file=sys.stderr)
+    sys.exit(1)
 
 preferred = None
+
+# Prefer desktop AppImage naming if present.
 for asset in appimages:
     name = asset.get("name", "").lower()
-    if "x86_64" in name or "amd64" in name:
+    if ("opencode-electron" in name or "desktop" in name) and ("x86_64" in name or "amd64" in name):
         preferred = asset
         break
 
-if preferred is None and appimages:
-    preferred = appimages[0]
+if preferred is None:
+    for asset in appimages:
+        name = asset.get("name", "").lower()
+        if "x86_64" in name or "amd64" in name:
+            preferred = asset
+            break
 
 if preferred is None:
-    print("No AppImage asset found in the latest release.", file=sys.stderr)
-    sys.exit(1)
+    preferred = appimages[0]
 
 print(release["tag_name"])
 print(preferred["browser_download_url"])
@@ -105,8 +111,8 @@ write_desktop_file() {
   cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Version=1.0
-Name=Opencode Desktop
-Comment=Opencode desktop app
+Name=OpenCode Desktop
+Comment=OpenCode desktop app
 Exec=$APPIMAGE_PATH %U
 TryExec=$APPIMAGE_PATH
 Icon=$ICON_PATH
@@ -127,11 +133,11 @@ main() {
 
   metadata_path="$tmp_dir/release.json"
 
-  info "Resolving latest Opencode Desktop release from ${RELEASE_API_URL}..."
+  info "Resolving latest OpenCode release from ${RELEASE_API_URL}..."
   mapfile -t release_data < <(resolve_release_metadata "$metadata_path")
 
   if [ "${#release_data[@]}" -lt 3 ]; then
-    error "Could not resolve the latest Opencode Desktop AppImage asset."
+    error "Could not resolve the latest OpenCode AppImage asset."
   fi
 
   tag="${release_data[0]}"
@@ -148,7 +154,7 @@ main() {
   if [ "$current_version" = "$tag" ]; then
     info "Installed version already matches latest release (${tag}). Reinstalling to refresh local files."
   else
-    info "Updating Opencode Desktop from ${current_version:-not installed} to ${tag}."
+    info "Updating OpenCode Desktop from ${current_version:-not installed} to ${tag}."
   fi
 
   tmp_appimage="$tmp_dir/$asset_name"
@@ -178,7 +184,7 @@ main() {
     gtk-update-icon-cache -f "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
   fi
 
-  info "Opencode Desktop installed successfully."
+  info "OpenCode Desktop installed successfully."
   info "Version: ${tag}"
   info "Source: ${appimage_url}"
   info "Run 'opencode-desktop' or launch it from your application menu."
