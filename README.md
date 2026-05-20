@@ -28,7 +28,7 @@ The `run-all.sh` script orchestrates the following process:
 
 2.  **Package Installation**:
     - **Shell**: Fish
-    - **Development**: Node.js, pnpm, Bun, Gemini CLI, Opencode, T3 Code, MariaDB Clients.
+    - **Development**: Node.js, pnpm, Bun, Gemini CLI, Cursor CLI, Opencode, T3 Code, MariaDB Clients.
     - **Editors**: VS Code, VS Code Insiders, Zed, Zed Preview, Antigravity.
 
 3.  **Configuration & Dotfiles**:
@@ -46,6 +46,7 @@ The `run-all.sh` script orchestrates the following process:
 
 - `run-all.sh`: The main entry point that executes all other scripts in the correct order.
 - `install-*.sh`: Scripts dedicated to installing specific tools or packages (e.g., `install-fish.sh`, `install-vscode.sh`).
+- `install-cursor-cli.sh`: Installs Cursor CLI using the official installer from `https://cursor.com/install`.
 - `install-opencode-desktop.sh`: Downloads the latest Opencode Desktop AppImage directly from GitHub Releases to avoid the current `opencode-bin` vs `opencode-desktop-bin` AUR package conflict.
 - `install-zed-preview.sh`: Downloads the latest Zed Preview release directly from GitHub Releases and installs it side-by-side with stable Zed as `zed-preview`.
 - `uninstall-zed.sh`: Removes the locally installed stable Zed app, launcher, desktop file, and icon.
