@@ -18,6 +18,7 @@
 ./install-vscode-insiders.sh
 ./install-antigravity.sh
 ./install-zed.sh
+./install-zed-preview.sh
 ./install-agent-browser.sh
 ./install-android-studio.sh
 ./install-claude-code.sh

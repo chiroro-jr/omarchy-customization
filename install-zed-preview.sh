@@ -3,19 +3,19 @@
 set -euo pipefail
 
 REPO="zed-industries/zed"
-LATEST_STABLE_RELEASE_API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+RELEASES_API_URL="https://api.github.com/repos/${REPO}/releases?per_page=100"
 ASSET_NAME="zed-linux-x86_64.tar.gz"
 
-INSTALL_DIR="$HOME/.local/share/zed"
-APP_DIR="$INSTALL_DIR/zed.app"
+INSTALL_DIR="$HOME/.local/share/zed-preview"
+APP_DIR="$INSTALL_DIR/zed-preview.app"
 VERSION_PATH="$INSTALL_DIR/version.txt"
 CHANNEL_PATH="$INSTALL_DIR/channel.txt"
 DESKTOP_DIR="$HOME/.local/share/applications"
-DESKTOP_FILE="$DESKTOP_DIR/dev.zed.Zed.desktop"
+DESKTOP_FILE="$DESKTOP_DIR/dev.zed.Zed-Preview.desktop"
 BIN_DIR="$HOME/.local/bin"
-BIN_PATH="$BIN_DIR/zed"
+BIN_PATH="$BIN_DIR/zed-preview"
 ICON_DIR="$HOME/.local/share/icons/hicolor/512x512/apps"
-ICON_PATH="$ICON_DIR/zed.png"
+ICON_PATH="$ICON_DIR/zed-preview.png"
 
 RUNTIME_PACKAGES=(
   alsa-lib
@@ -54,18 +54,18 @@ error() {
 
 usage() {
   cat <<'EOF'
-Usage: ./install-zed.sh
+Usage: ./install-zed-preview.sh
 
-Installs the latest stable Zed release.
+Installs the latest Zed Preview release side-by-side with stable Zed.
 
 Installed paths:
-  App:     ~/.local/share/zed/zed.app
-  CLI:     ~/.local/bin/zed
-  Desktop: ~/.local/share/applications/dev.zed.Zed.desktop
-  Icon:    ~/.local/share/icons/hicolor/512x512/apps/zed.png
+  App:     ~/.local/share/zed-preview/zed-preview.app
+  CLI:     ~/.local/bin/zed-preview
+  Desktop: ~/.local/share/applications/dev.zed.Zed-Preview.desktop
+  Icon:    ~/.local/share/icons/hicolor/512x512/apps/zed-preview.png
 
-Options:
-  -h, --help  Show this help message.
+Configuration is shared with stable Zed by default:
+  ~/.config/zed
 EOF
 }
 
@@ -129,10 +129,10 @@ ensure_runtime_dependencies() {
   error "Missing runtime packages and neither yay nor omarchy is available to install them."
 }
 
-resolve_stable_release_metadata() {
+resolve_preview_release_metadata() {
   local metadata_path="$1"
 
-  download_file "$LATEST_STABLE_RELEASE_API_URL" "$metadata_path"
+  download_file "$RELEASES_API_URL" "$metadata_path"
 
   python3 - "$metadata_path" "$ASSET_NAME" <<'PY'
 import json
@@ -142,10 +142,27 @@ path = sys.argv[1]
 asset_name = sys.argv[2]
 
 with open(path, "r", encoding="utf-8") as fh:
-    release = json.load(fh)
+    releases = json.load(fh)
 
-if not isinstance(release, dict):
-    print("Unexpected GitHub latest release response.", file=sys.stderr)
+if not isinstance(releases, list):
+    print("Unexpected GitHub releases response.", file=sys.stderr)
+    sys.exit(1)
+
+release = None
+for candidate in releases:
+    tag = candidate.get("tag_name", "")
+    if candidate.get("prerelease", False) and tag.endswith("-pre"):
+        release = candidate
+        break
+
+if release is None:
+    for candidate in releases:
+        if candidate.get("prerelease", False):
+            release = candidate
+            break
+
+if release is None:
+    print("Could not find a Zed Preview release in GitHub metadata.", file=sys.stderr)
     sys.exit(1)
 
 asset = None
@@ -171,15 +188,15 @@ write_desktop_file() {
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Zed
+Name=Zed Preview
 GenericName=Text Editor
 Comment=A high-performance, multiplayer code editor.
 TryExec=$BIN_PATH
 StartupNotify=true
 Exec=$BIN_PATH %U
-Icon=zed
+Icon=zed-preview
 Categories=Utility;TextEditor;Development;IDE;
-Keywords=zed;
+Keywords=zed;preview;
 MimeType=text/plain;application/x-zerosize;x-scheme-handler/zed;
 Actions=NewWorkspace;
 
@@ -190,7 +207,7 @@ EOF
 }
 
 main() {
-  local tmp_dir metadata_path tmp_archive tag archive_url archive_name current_version current_channel
+  local tmp_dir metadata_path tmp_archive tag archive_url archive_name current_version current_channel extracted_app_dir
 
   case "${1:-}" in
     -h|--help)
@@ -209,11 +226,11 @@ main() {
 
   metadata_path="$tmp_dir/release.json"
 
-  info "Resolving latest Zed stable release from ${LATEST_STABLE_RELEASE_API_URL}..."
-  mapfile -t release_data < <(resolve_stable_release_metadata "$metadata_path")
+  info "Resolving latest Zed Preview release from ${RELEASES_API_URL}..."
+  mapfile -t release_data < <(resolve_preview_release_metadata "$metadata_path")
 
   if [ "${#release_data[@]}" -lt 3 ]; then
-    error "Could not resolve the latest stable Zed archive asset."
+    error "Could not resolve the latest Zed Preview archive asset."
   fi
 
   tag="${release_data[0]}"
@@ -231,10 +248,10 @@ main() {
     current_channel="$(cat "$CHANNEL_PATH")"
   fi
 
-  if [ "$current_version" = "$tag" ] && [ "$current_channel" = "stable" ]; then
-    info "Installed version already matches selected release (${tag}, stable). Reinstalling to refresh local files."
+  if [ "$current_version" = "$tag" ] && [ "$current_channel" = "preview" ]; then
+    info "Installed version already matches selected release (${tag}, preview). Reinstalling to refresh local files."
   else
-    info "Updating Zed from ${current_version:-not installed}${current_channel:+ (${current_channel})} to ${tag} (stable)."
+    info "Updating Zed Preview from ${current_version:-not installed}${current_channel:+ (${current_channel})} to ${tag}."
   fi
 
   tmp_archive="$tmp_dir/$archive_name"
@@ -245,11 +262,18 @@ main() {
   rm -rf "$APP_DIR"
   tar -xzf "$tmp_archive" -C "$INSTALL_DIR"
 
-  [ -x "$APP_DIR/bin/zed" ] || error "Expected Zed binary was not found at $APP_DIR/bin/zed after extraction."
-  [ -f "$APP_DIR/share/icons/hicolor/512x512/apps/zed.png" ] || warn "Expected Zed icon was not found in the extracted archive."
+  extracted_app_dir="$APP_DIR"
+  if [ ! -d "$extracted_app_dir" ] && [ -d "$INSTALL_DIR/zed.app" ]; then
+    # Older/changed preview archives may unpack as zed.app. Keep our on-disk
+    # layout side-by-side friendly regardless of the archive root name.
+    mv "$INSTALL_DIR/zed.app" "$APP_DIR"
+  fi
+
+  [ -x "$APP_DIR/bin/zed" ] || error "Expected Zed Preview binary was not found at $APP_DIR/bin/zed after extraction."
+  [ -f "$APP_DIR/share/icons/hicolor/512x512/apps/zed.png" ] || warn "Expected Zed Preview icon was not found in the extracted archive."
 
   printf '%s\n' "$tag" > "$VERSION_PATH"
-  printf '%s\n' "stable" > "$CHANNEL_PATH"
+  printf '%s\n' "preview" > "$CHANNEL_PATH"
 
   if [ -f "$APP_DIR/share/icons/hicolor/512x512/apps/zed.png" ]; then
     cp "$APP_DIR/share/icons/hicolor/512x512/apps/zed.png" "$ICON_PATH"
@@ -268,15 +292,14 @@ main() {
     gtk-update-icon-cache -f "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
   fi
 
-  if pacman -Q zed >/dev/null 2>&1; then
-    warn "A pacman-managed zed package is also installed. ~/.local/bin/zed should take precedence, but consider removing the repo/AUR package to avoid confusion."
+  if pacman -Q zed-preview >/dev/null 2>&1; then
+    warn "A pacman-managed zed-preview package is also installed. ~/.local/bin/zed-preview should take precedence, but consider removing the repo/AUR package to avoid confusion."
   fi
 
-  info "Zed installed successfully."
-  info "Channel: stable"
+  info "Zed Preview installed successfully."
   info "Version: ${tag}"
   info "Source: ${archive_url}"
-  info "Run 'zed' or launch it from your application menu."
+  info "Run 'zed-preview' or launch 'Zed Preview' from your application menu."
 }
 
 main "$@"
