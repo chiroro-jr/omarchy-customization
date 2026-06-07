@@ -13,6 +13,7 @@
 ./install-bun.sh
 ./install-gemini-cli.sh
 ./install-cursor-cli.sh
+./install-cursor.sh
 ./install-opencode.sh
 ./install-mariadb-clients.sh
 ./install-vscode.sh

@@ -6,4 +6,4 @@ if ! command -v mise >/dev/null 2>&1; then
     exit 1
 fi
 # 'mise use' both installs the version and sets it in the global config
-mise use --global bun@latest
+mise unuse --global bun@latest
