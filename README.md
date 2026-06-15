@@ -50,6 +50,7 @@ The `run-all.sh` script orchestrates the following process:
 - `install-cursor.sh`: Parses `https://cursor.com/download` to find the latest Cursor Linux AppImage URL, follows Cursor's redirect to the current release asset, and installs it locally as `~/.local/share/cursor/Cursor.AppImage`.
 - `uninstall-cursor.sh`: Removes the locally installed Cursor AppImage, launcher, desktop file, and icon.
 - `install-opencode-desktop.sh`: Downloads the latest Opencode Desktop AppImage directly from GitHub Releases to avoid the current `opencode-bin` vs `opencode-desktop-bin` AUR package conflict.
+- `install-gram.sh`: Downloads the latest Gram Linux tarball directly from Codeberg Releases and installs it locally as `~/.local/share/gram/gram.app`.
 - `install-zennotes.sh`: Downloads the latest ZenNotes Linux AppImage directly from GitHub Releases, extracts it once to avoid slow AppImage/FUSE startup, and installs it locally as `~/.local/share/zennotes/app`.
 - `install-zed-preview.sh`: Downloads the latest Zed Preview release directly from GitHub Releases and installs it side-by-side with stable Zed as `zed-preview`.
 - `uninstall-zed.sh`: Removes the locally installed stable Zed app, launcher, desktop file, and icon.
@@ -57,6 +58,7 @@ The `run-all.sh` script orchestrates the following process:
 - `install-t3-code.sh`: Downloads the latest T3 Code AppImage directly from GitHub Releases and can be rerun to update immediately (`--nightly` or `--channel nightly` installs the latest nightly build; default is stable).
 - `uninstall-kimi-code.sh`: Removes the `kimi-cli` tool installed via `uv`, with a manual fallback if `uv` is no longer present.
 - `uninstall-opencode-desktop.sh`: Removes the locally installed Opencode Desktop AppImage, launcher, desktop file, and icon.
+- `uninstall-gram.sh`: Removes the locally installed Gram app, launcher, desktop file, and icons.
 - `uninstall-zennotes.sh`: Removes the locally installed ZenNotes app, launcher, desktop file, and icon.
 - `uninstall-t3-code.sh`: Removes the locally installed T3 Code AppImage, launcher, desktop file, and icon.
 - `symlink-*.sh`: Scripts for linking configuration files that require special handling (VS Code).
