@@ -52,6 +52,7 @@ The `run-all.sh` script orchestrates the following process:
 - `install-opencode-desktop.sh`: Downloads the latest Opencode Desktop AppImage directly from GitHub Releases to avoid the current `opencode-bin` vs `opencode-desktop-bin` AUR package conflict.
 - `install-gram.sh`: Downloads the latest Gram Linux tarball directly from Codeberg Releases and installs it locally as `~/.local/share/gram/gram.app`.
 - `install-zennotes.sh`: Downloads the latest ZenNotes Linux AppImage directly from GitHub Releases, extracts it once to avoid slow AppImage/FUSE startup, and installs it locally as `~/.local/share/zennotes/app`.
+- `install-synara.sh`: Downloads the latest Synara Linux AppImage directly from GitHub Releases, extracts it once to avoid slow AppImage/FUSE startup, and installs it locally as `~/.local/share/synara/app`.
 - `install-zed-preview.sh`: Downloads the latest Zed Preview release directly from GitHub Releases and installs it side-by-side with stable Zed as `zed-preview`.
 - `uninstall-zed.sh`: Removes the locally installed stable Zed app, launcher, desktop file, and icon.
 - `uninstall-zed-preview.sh`: Removes the locally installed Zed Preview app, launcher, desktop file, and icon.
@@ -60,6 +61,7 @@ The `run-all.sh` script orchestrates the following process:
 - `uninstall-opencode-desktop.sh`: Removes the locally installed Opencode Desktop AppImage, launcher, desktop file, and icon.
 - `uninstall-gram.sh`: Removes the locally installed Gram app, launcher, desktop file, and icons.
 - `uninstall-zennotes.sh`: Removes the locally installed ZenNotes app, launcher, desktop file, and icon.
+- `uninstall-synara.sh`: Removes the locally installed Synara app, launcher, desktop file, and icon.
 - `uninstall-t3-code.sh`: Removes the locally installed T3 Code AppImage, launcher, desktop file, and icon.
 - `symlink-*.sh`: Scripts for linking configuration files that require special handling (VS Code).
 - `change-shell.sh`: Sets `fish` as the default user shell.
