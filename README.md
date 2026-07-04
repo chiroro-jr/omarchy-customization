@@ -47,6 +47,8 @@ The `run-all.sh` script orchestrates the following process:
 - `run-all.sh`: The main entry point that executes all other scripts in the correct order.
 - `install-*.sh`: Scripts dedicated to installing specific tools or packages (e.g., `install-fish.sh`, `install-vscode.sh`).
 - `install-cursor-cli.sh`: Installs Cursor CLI using the official installer from `https://cursor.com/install`.
+- `install-pi-coding-agent.sh`: Downloads the latest Pi Coding Agent Linux release directly from GitHub Releases, verifies `SHA256SUMS`, installs to `~/.local/share/pi-coding-agent`, and symlinks `~/.local/bin/pi`.
+- `uninstall-pi-coding-agent.sh`: Removes the release-based Pi install.
 - `install-cursor.sh`: Parses `https://cursor.com/download` to find the latest Cursor Linux AppImage URL, follows Cursor's redirect to the current release asset, and installs it locally as `~/.local/share/cursor/Cursor.AppImage`.
 - `uninstall-cursor.sh`: Removes the locally installed Cursor AppImage, launcher, desktop file, and icon.
 - `install-opencode-desktop.sh`: Downloads the latest Opencode Desktop AppImage directly from GitHub Releases to avoid the current `opencode-bin` vs `opencode-desktop-bin` AUR package conflict.
